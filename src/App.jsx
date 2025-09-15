@@ -11,7 +11,7 @@ const TOTAL_WEEKS = 16
 const STORAGE_KEY = 'portfolio_items_v2'
 
 // Cambia por tu endpoint de Vercel
-const UPLOAD_ENDPOINT = 'https://TU-PROYECTO-VERCEL.vercel.app/api/upload'
+const UPLOAD_ENDPOINT = 'https://arquisoftware2.vercel.app/api/upload'
 
 function uid(){ return Math.random().toString(36).slice(2,9) + Date.now().toString(36) }
 
