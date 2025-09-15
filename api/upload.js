@@ -86,9 +86,17 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ ok: true, url, path, mime, commit: r.data?.commit?.sha })
     } catch (e) {
-      const ghMsg = e?.response?.data?.message
-      return res.status(500).json({ error: ghMsg || e.message || 'Upload failed' })
-    }
+  // 👇 Esto aparecerá en Runtime Logs de Vercel
+  console.error('UPLOAD_ERROR', {
+    status: e?.status,
+    gh: e?.response?.data,
+    msg: e?.message
+  })
+
+  const ghMsg = e?.response?.data?.message
+  return res.status(500).json({ error: ghMsg || e.message || 'Upload failed' })
+}
+
   })
 
   req.pipe(bb)
