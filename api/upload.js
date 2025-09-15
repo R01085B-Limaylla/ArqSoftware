@@ -1,4 +1,4 @@
-// api/upload.js (Vercel Serverless Function)
+// api/upload.js
 // npm i octokit busboy
 
 import { Octokit } from 'octokit'
@@ -6,11 +6,11 @@ import Busboy from 'busboy'
 
 export const config = { api: { bodyParser: false } }
 
-// ENV obligatorias
-const OWNER  = process.env.GH_OWNER         // ej: "TU_USUARIO"
-const REPO   = process.env.GH_REPO          // ej: "portafolio"
+// Requiere en Vercel → Settings → Environment Variables:
+const OWNER  = process.env.GH_OWNER       // ej: "tuusuario"
+const REPO   = process.env.GH_REPO        // ej: "portafolio"
 const BRANCH = process.env.GH_BRANCH || 'gh-pages'
-const TOKEN  = process.env.GITHUB_TOKEN     // Fine-grained o PAT con Contents: Read & write
+const TOKEN  = process.env.GITHUB_TOKEN   // Fine-grained PAT: Contents: Read & write
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -20,21 +20,17 @@ function cors(res) {
 
 async function ensureBranch(octokit, owner, repo, branch) {
   try {
-    // ¿existe la rama?
     await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
       owner, repo, ref: `heads/${branch}`
     })
-    return
   } catch (e) {
     if (e.status !== 404) throw e
-    // tomar ref de la rama por defecto (main/master)
-    const repoInfo = await octokit.request('GET /repos/{owner}/{repo}', { owner, repo })
+    const repoInfo = await octokit.request('GET /repos/{owner}/{repo}')
     const defaultBranch = repoInfo.data.default_branch || 'main'
     const baseRef = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
       owner, repo, ref: `heads/${defaultBranch}`
     })
     const sha = baseRef.data.object.sha
-    // crear la rama
     await octokit.request('POST /repos/{owner}/{repo}/git/refs', {
       owner, repo,
       ref: `refs/heads/${branch}`,
@@ -47,11 +43,9 @@ export default async function handler(req, res) {
   cors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  if (!TOKEN || !OWNER || !REPO) return res.status(500).json({ error: 'Server not configured' })
+  if (!TOKEN || !OWNER || !REPO) return res.status(500).json({ error: 'Server not configured (vars)' })
 
-  // ⚠️ Vercel límite práctico de payload en funciones ~4.5MB.
-  // Para archivos grandes, considera otro almacenamiento (S3) o dividir.
-
+  // Nota: Vercel funciones ~4.5 MB máximo. Prueba primero con PDFs < 4 MB.
   const bb = Busboy({ headers: req.headers })
   let fileBuffer = null, fileName = '', week = 'misc', title = ''
 
@@ -74,25 +68,26 @@ export default async function handler(req, res) {
       const octokit = new Octokit({ auth: TOKEN })
       await ensureBranch(octokit, OWNER, REPO, BRANCH)
 
-      const safeName = fileName.replace(/[^a-zA-Z0-9._-]+/g, '_')
-      const stamp = Date.now()
-      const path = `pdfs/semana-${week}/${stamp}-${safeName}`
-      const message = `chore: subir ${title || safeName} (semana ${week})`
+      const safe = (fileName || 'archivo').replace(/[^a-zA-Z0-9._-]+/g, '_')
+      const uid = Math.random().toString(36).slice(2, 8)
+      const path = `pdfs/semana-${week}/${Date.now()}-${uid}-${safe}`
+      const message = `chore: subir ${title || safe} (semana ${week})`
 
       const content = fileBuffer.toString('base64')
-      await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+      const r = await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
         owner: OWNER, repo: REPO, path,
         message, content, branch: BRANCH
       })
 
       const url = `https://${OWNER}.github.io/${REPO}/${path}`
-      const lower = safeName.toLowerCase()
+      const lower = safe.toLowerCase()
       const mime = lower.endsWith('.pdf') ? 'application/pdf'
         : (/\.(png|jpe?g|gif|webp|svg)$/.test(lower) ? 'image/*' : 'application/octet-stream')
 
-      return res.status(200).json({ ok: true, url, path, mime })
+      return res.status(200).json({ ok: true, url, path, mime, commit: r.data?.commit?.sha })
     } catch (e) {
-      return res.status(500).json({ error: e.message || 'Upload failed' })
+      const ghMsg = e?.response?.data?.message
+      return res.status(500).json({ error: ghMsg || e.message || 'Upload failed' })
     }
   })
 
