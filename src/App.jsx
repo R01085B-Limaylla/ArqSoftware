@@ -52,15 +52,28 @@ export default function App(){
   }
 
   async function uploadToRepo(file, { week, title }){
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('week', String(week))
-    fd.append('title', title || file.name)
-    const r = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
-    const data = await r.json()
-    if (!r.ok) throw new Error(data.error || 'Falló la subida')
-    return data // { ok, url, path, mime }
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('week', String(week))
+  fd.append('title', title || file.name)
+
+  let r
+  try {
+    r = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
+  } catch (e) {
+    throw new Error('No se pudo conectar con el servidor (fetch). Revisa la URL del endpoint.')
   }
+
+  let data = null
+  try { data = await r.json() } catch { /* ignora */ }
+
+  if (!r.ok) {
+    const msg = data?.error || `HTTP ${r.status} ${r.statusText}`
+    throw new Error(`Subida falló: ${msg}`)
+  }
+  return data
+}
+
 
   async function addItem({ file, url, title, week, kind, toRepo }){
     try{
