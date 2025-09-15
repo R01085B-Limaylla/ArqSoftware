@@ -23,8 +23,7 @@ export default function LoginModal({ open, onClose, onLogin }){
           <label>Contraseña
             <input name="password" type="password" placeholder="••••••••" required />
           </label>
-          <p className="muted">Demo: <code>admin</code> / <code>admin123</code></p>
-          <div className="form-actions">
+             <div className="form-actions">
             <button className="btn primary" type="submit">Ingresar</button>
           </div>
         </form>
