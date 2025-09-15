@@ -83,6 +83,40 @@ export default async function handler(req, res) {
       const lower = safe.toLowerCase()
       const mime = lower.endsWith('.pdf') ? 'application/pdf'
         : (/\.(png|jpe?g|gif|webp|svg)$/.test(lower) ? 'image/*' : 'application/octet-stream')
+// === ACTUALIZAR portfolio.json EN gh-pages ===
+let items = []
+let indexSha = null
+
+try {
+  // Intentar leer portfolio.json existente
+  const rIndex = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+    owner: OWNER, repo: REPO, path: 'portfolio.json', ref: BRANCH
+  })
+  items = JSON.parse(Buffer.from(rIndex.data.content, 'base64').toString('utf8'))
+  indexSha = rIndex.data.sha
+} catch (err) {
+  // Si no existe, lo crearemos desde cero
+  if (err.status !== 404) throw err
+}
+
+// Agregar el nuevo ítem
+items.push({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+  title,
+  week,
+  url,
+  mime,
+  addedAt: Date.now()
+})
+
+// Subir portfolio.json actualizado
+await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+  owner: OWNER, repo: REPO, path: 'portfolio.json',
+  message: `chore: update index (semana ${week})`,
+  content: Buffer.from(JSON.stringify(items, null, 2)).toString('base64'),
+  branch: BRANCH,
+  sha: indexSha || undefined
+})
 
       return res.status(200).json({ ok: true, url, path, mime, commit: r.data?.commit?.sha })
     } catch (e) {
