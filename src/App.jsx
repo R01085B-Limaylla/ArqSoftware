@@ -23,22 +23,46 @@ export default function App(){
   const [loginOpen, setLoginOpen] = useState(false)
   const [lightbox, setLightbox] = useState({ open:false, src:'', caption:'' })
 
-  useEffect(()=>{
-    try{
+// 1) Cargar índice remoto al iniciar (con fallback a localStorage)
+useEffect(() => {
+  (async () => {
+    try {
+      // intenta leer el índice compartido en gh-pages
+      const r = await fetch('https://r01085b-limaylla.github.io/ArqSoftware/portfolio.json', {
+        cache: 'no-store' // evita caché para ver cambios al instante
+      })
+      if (r.ok) {
+        const remote = await r.json()
+        setItems(Array.isArray(remote) ? remote : [])
+      } else {
+        // si aún no existe o hay 404, usa lo que tengas en localStorage
+        const raw = localStorage.getItem(STORAGE_KEY)
+        setItems(raw ? JSON.parse(raw) : [])
+      }
+    } catch {
+      // si hay error de red, también cae a local
       const raw = localStorage.getItem(STORAGE_KEY)
       setItems(raw ? JSON.parse(raw) : [])
-    }catch{ setItems([]) }
+    }
     setIsAdmin(sessionStorage.getItem('isAdmin') === '1')
-  },[])
+  })()
+}, [])
 
-  useEffect(()=>{ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)) },[items])
+// 2) Seguir guardando en localStorage como caché local (opcional)
+useEffect(() => {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)) } catch {}
+}, [items])
 
-  const itemsByWeek = useMemo(()=>{
-    const map = new Map()
-    for(let i=1;i<=TOTAL_WEEKS;i++) map.set(i, [])
-    for(const it of items){ if(map.has(it.week)) map.get(it.week).push(it) }
-    return map
-  }, [items])
+// 3) (sin cambios) agrupar por semana
+const itemsByWeek = useMemo(() => {
+  const map = new Map()
+  for (let i = 1; i <= TOTAL_WEEKS; i++) map.set(i, [])
+  for (const it of items) {
+    if (map.has(it.week)) map.get(it.week).push(it)
+  }
+  return map
+}, [items])
+
 
   function handleLogin(user, pass){
     if(user===ADMIN_USER && pass===ADMIN_PASS){
