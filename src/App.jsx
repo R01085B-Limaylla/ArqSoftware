@@ -1,27 +1,56 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import Header from './components/Header'
-import LoginModal from './components/LoginModal'
-import Weeks from './components/Weeks'
-import FileUploader from './components/FileUploader'
-import FileItem from './components/FileItem'
+// src/App.jsx
+import React, { useEffect, useMemo, useState } from "react"
 
-const ADMIN_USER = 'admin'
-const ADMIN_PASS = 'admin123'
+// Si ya tienes estos componentes en tu proyecto, se usan igual.
+// Si tus rutas difieren, ajusta los imports a tus rutas reales:
+import Header from "./components/Header.jsx"
+import Weeks from "./components/Weeks.jsx"
+import LoginModal from "./components/LoginModal.jsx"
+import FileUploader from "./components/FileUploader.jsx"
+
 const TOTAL_WEEKS = 16
-const STORAGE_KEY = 'portfolio_items_v2'
+const STORAGE_KEY = "portfolio_items_v1"
 
-// Cambia por tu endpoint de Vercel
-const UPLOAD_ENDPOINT = 'https://arquisoftware2.vercel.app/api/upload'
+// 🟢 Usa tu endpoint estable de Vercel (no el de deployment con hash):
+const UPLOAD_ENDPOINT = "https://arquisoftware2.vercel.app/api/upload"
 
-function uid(){ return Math.random().toString(36).slice(2,9) + Date.now().toString(36) }
+// Utilidad simple para detección por extensión (cuando no viene mime)
+function guessKindFromUrl(url = "") {
+  const u = url.toLowerCase()
+  if (u.endsWith(".pdf")) return "pdf"
+  if (/\.(png|jpe?g|gif|webp|svg)$/.test(u)) return "image"
+  return "other"
+}
 
-export default function App(){
-  const [view, setView] = useState('perfil')
-  const [isAdmin, setIsAdmin] = useState(false)
+// --- Subida al repositorio (Vercel) ---
+async function uploadToRepo(file, { week, title }) {
+  const fd = new FormData()
+  fd.append("file", file)
+  fd.append("week", String(week))
+  fd.append("title", title || file.name)
+
+  let r
+  try {
+    r = await fetch(UPLOAD_ENDPOINT, { method: "POST", body: fd })
+  } catch (e) {
+    throw new Error("No se pudo conectar con el servidor (fetch). Revisa la URL del endpoint.")
+  }
+
+  let data = null
+  try { data = await r.json() } catch { /* ignore */ }
+
+  if (!r.ok) {
+    const msg = data?.error || `HTTP ${r.status} ${r.statusText}`
+    throw new Error(`Subida falló: ${msg}`)
+  }
+  return data // { ok, url, path, mime, commit }
+}
+
+export default function App() {
   const [items, setItems] = useState([])
-  const [week, setWeek] = useState(1)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [view, setView] = useState("portafolio") // 'perfil' | 'portafolio'
   const [loginOpen, setLoginOpen] = useState(false)
-  const [lightbox, setLightbox] = useState({ open:false, src:'', caption:'' })
 
 // 1) Cargar índice remoto al iniciar (con cache-buster y fallback a localStorage)
   useEffect(() => {
