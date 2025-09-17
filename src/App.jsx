@@ -23,36 +23,46 @@ export default function App(){
   const [loginOpen, setLoginOpen] = useState(false)
   const [lightbox, setLightbox] = useState({ open:false, src:'', caption:'' })
 
-// 1) Cargar índice remoto al iniciar (con fallback a localStorage)
-useEffect(() => {
-  (async () => {
-    try {
-      // Lee el índice compartido desde gh-pages
-      const r = await fetch('https://r01085b-limaylla.github.io/ArqSoftware/portfolio.json', {
-        cache: 'no-store'
-      })
-      if (r.ok) {
-        const remote = await r.json()
-        setItems(Array.isArray(remote) ? remote : [])
-      } else {
-        // si aún no existe el JSON, usa lo que haya en localStorage (vacío la primera vez)
+// 1) Cargar índice remoto al iniciar (con cache-buster y fallback a localStorage)
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(
+          // cache-buster para evitar CDN cache (ver cambios inmediatamente)
+          "https://r01085b-limaylla.github.io/ArqSoftware/portfolio.json?t=" + Date.now(),
+          { cache: "no-store" }
+        )
+        if (r.ok) {
+          const remote = await r.json()
+          setItems(Array.isArray(remote) ? remote : [])
+        } else {
+          const raw = localStorage.getItem(STORAGE_KEY)
+          setItems(raw ? JSON.parse(raw) : [])
+        }
+      } catch {
         const raw = localStorage.getItem(STORAGE_KEY)
         setItems(raw ? JSON.parse(raw) : [])
       }
-    } catch {
-      // sin conexión → fallback a local
-      const raw = localStorage.getItem(STORAGE_KEY)
-      setItems(raw ? JSON.parse(raw) : [])
+      setIsAdmin(sessionStorage.getItem("isAdmin") === "1")
+    })()
+  }, [])
+
+  // 2) Guardar en localStorage como caché (opcional)
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    } catch {}
+  }, [items])
+
+  // 3) Agrupar por semana (sin cambios)
+  const itemsByWeek = useMemo(() => {
+    const map = new Map()
+    for (let i = 1; i <= TOTAL_WEEKS; i++) map.set(i, [])
+    for (const it of items) {
+      if (map.has(it.week)) map.get(it.week).push(it)
     }
-    setIsAdmin(sessionStorage.getItem('isAdmin') === '1')
-  })()
-}, [])
-
-
-// 2) Seguir guardando en localStorage como caché local (opcional)
-useEffect(() => {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)) } catch {}
-}, [items])
+    return map
+  }, [items])
 
 // 3) (sin cambios) agrupar por semana
 const itemsByWeek = useMemo(() => {
