@@ -27,26 +27,27 @@ export default function App(){
 useEffect(() => {
   (async () => {
     try {
-      // intenta leer el índice compartido en gh-pages
+      // Lee el índice compartido desde gh-pages
       const r = await fetch('https://r01085b-limaylla.github.io/ArqSoftware/portfolio.json', {
-        cache: 'no-store' // evita caché para ver cambios al instante
+        cache: 'no-store'
       })
       if (r.ok) {
         const remote = await r.json()
         setItems(Array.isArray(remote) ? remote : [])
       } else {
-        // si aún no existe o hay 404, usa lo que tengas en localStorage
+        // si aún no existe el JSON, usa lo que haya en localStorage (vacío la primera vez)
         const raw = localStorage.getItem(STORAGE_KEY)
         setItems(raw ? JSON.parse(raw) : [])
       }
     } catch {
-      // si hay error de red, también cae a local
+      // sin conexión → fallback a local
       const raw = localStorage.getItem(STORAGE_KEY)
       setItems(raw ? JSON.parse(raw) : [])
     }
     setIsAdmin(sessionStorage.getItem('isAdmin') === '1')
   })()
 }, [])
+
 
 // 2) Seguir guardando en localStorage como caché local (opcional)
 useEffect(() => {
