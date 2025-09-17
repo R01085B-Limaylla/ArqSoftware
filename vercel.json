@@ -1,6 +1,11 @@
 {
+  "version": 2,
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": "",
   "functions": {
-    "api/upload.js": {
+    "api/*.js": {
+      "runtime": "nodejs18.x",
       "maxDuration": 10,
       "memory": 256
     }
