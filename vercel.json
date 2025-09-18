@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": null,
-  "buildCommand": "",
+  "buildCommand": "echo \"skip build\"",
   "installCommand": "npm install --omit=dev",
   "functions": {
     "api/**/*.{js,mjs,ts}": {
