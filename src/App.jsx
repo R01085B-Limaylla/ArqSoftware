@@ -83,16 +83,6 @@ export default function App() {
     } catch {}
   }, [items])
 
-  // 3) Agrupar por semana (sin cambios)
-  const itemsByWeek = useMemo(() => {
-    const map = new Map()
-    for (let i = 1; i <= TOTAL_WEEKS; i++) map.set(i, [])
-    for (const it of items) {
-      if (map.has(it.week)) map.get(it.week).push(it)
-    }
-    return map
-  }, [items])
-
 // 3) (sin cambios) agrupar por semana
 const itemsByWeek = useMemo(() => {
   const map = new Map()
@@ -102,7 +92,6 @@ const itemsByWeek = useMemo(() => {
   }
   return map
 }, [items])
-
 
   function handleLogin(user, pass){
     if(user===ADMIN_USER && pass===ADMIN_PASS){
