@@ -1,0 +1,36 @@
+name: Deploy to gh-pages
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write   # para poder pushear a gh-pages
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build (Vite)
+        run: npm run build
+
+      # Publica SOLO el contenido de dist/ en gh-pages,
+      # sin borrar lo que ya existe (pdfs/ y portfolio.json).
+      - name: Deploy dist to gh-pages (preserve existing files)
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: dist
+          clean: false   # 👈 NO borra lo existente
