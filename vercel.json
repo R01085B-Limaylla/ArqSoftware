@@ -2,7 +2,7 @@
   "version": 2,
   "framework": null,
   "buildCommand": "",
-  "installCommand": "npm i --omit=dev",
+  "installCommand": "npm install --omit=dev",
   "functions": {
     "api/**/*.{js,mjs,ts}": {
       "runtime": "@vercel/node@3.0.0",
